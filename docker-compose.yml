@@ -1,0 +1,74 @@
+version: '3'
+
+services:
+  php_fund:
+    container_name: php_fund
+    build:
+      context: ./php-fpm
+      args:
+      - SSH_USER=${SSH_USER}
+      - SSH_PASSWORD=${SSH_PASSWORD}
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psql_fund:5432/${POSTGRES_DB}?serverVersion=13&charset=utf8
+    volumes:
+      - ../:/var/www
+    depends_on:
+      - psql_fund
+    networks:
+        arabitonary:
+            ipv4_address: 172.16.235.50
+
+  nginx_fund:
+    container_name: nginx_fund
+    build:
+      context: ./nginx
+    volumes:
+      - ../:/var/www
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/sites/:/etc/nginx/sites-available
+      - ./nginx/conf.d/:/etc/nginx/conf.d
+      - ./logs:/var/log
+    depends_on:
+      - php_fund
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+        arabitonary:
+            ipv4_address: 172.16.235.60
+
+  psql_fund:
+    container_name: psql_fund
+    image: 'postgres:latest'
+    ports:
+      - 5432:5432
+    networks:
+        arabitonary:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER} # The PostgreSQL user (useful to connect to the database)
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # The PostgreSQL password (useful to connect to the database)
+      POSTGRES_DB:  ${POSTGRES_DB} 
+
+  pgadmin_fund:
+    container_name: pgadmin_fund
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: yacine@yacine.com
+      PGADMIN_DEFAULT_PASSWORD: UAsZrf
+    ports:
+      - "5050:80"
+    networks:
+        arabitonary:
+networks:
+    arabitonary:
+        # use the bridge driver, but enable IPv6
+        driver: bridge
+        driver_opts:
+            com.docker.network.enable_ipv6: "true"
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.16.235.0/24
